@@ -6,13 +6,28 @@
 #define arduinoLED 13   // Dioda podpięta do pinu 13
 #define freqPIN 6
 
+#define CUTOFF 800
+#define TIMES 5
+#define LOCKSPEED 250
+
+#define DIRECTION 12
+#define SPEED 3
+#define BREAK 9
+#define CURRENT 0
+
+float current;
+
 SerialCommand sCmd;     // obiekt komunikacji Serial
 
 void setup() {
   pinMode(arduinoLED, OUTPUT);      // Ustawiam PIN jako wyjscie analogowe
   digitalWrite(arduinoLED, LOW);    // Dioda wylaczona
   pinMode(freqPIN, OUTPUT);  
-  
+
+  pinMode(DIRECTION, OUTPUT);
+  pinMode(SPEED, OUTPUT);
+  pinMode(BREAK, OUTPUT);
+    
 
   Serial.begin(9600);
 
@@ -21,12 +36,149 @@ void setup() {
   
   sCmd.addCommand("spf", setPwmAndFreq);
   sCmd.addCommand("sdl", setDigitalLevel);
+  
+  
+  sCmd.addCommand("set", setSpeed);
+  sCmd.addCommand("start", start);
+  sCmd.addCommand("stop", stop);
+  sCmd.addCommand("right", right);
+  sCmd.addCommand("left", left);
+  sCmd.addCommand("sense", sense);
+  sCmd.addCommand("open", open);
+  sCmd.addCommand("close", close);
+  
+  
+  
+  
    
   Serial.println("Engine console initialized. Ready when you are.");
 }
 
 void loop() {
   sCmd.readSerial();     // Przetwarzanie, to wszystko co dzieje sie w petli
+}
+
+
+
+void close() {
+  
+  right();
+  setSpeedHigh();
+  int counter_sense = 0;
+  
+  while (counter_sense < TIMES) {
+    
+    if (current > CUTOFF) {
+     counter_sense = counter_sense + 1; 
+    }
+    
+    
+    sense();
+    
+    
+  
+  }
+ 
+  stop();
+  current = 0;
+  
+}
+
+void open() {
+  
+  left();
+  setSpeedHigh();
+  int counter_sense = 0;
+  
+  while (counter_sense < TIMES) {
+    
+    if (current > CUTOFF) {
+     counter_sense = counter_sense + 1; 
+    }
+    
+   
+    
+    
+    sense();
+    
+    
+    
+    
+  
+  }
+ 
+  stop();
+  current = 0;
+  
+}
+
+
+
+void start() {
+ 
+  digitalWrite(BREAK, LOW);
+  
+}
+
+void stop() {
+ 
+  digitalWrite(BREAK, HIGH);
+  
+}
+
+
+void right() {
+  stop();
+ 
+  digitalWrite(DIRECTION, HIGH);
+  start();
+  
+  
+  
+}
+
+void left() {
+  stop();
+ 
+  digitalWrite(DIRECTION, LOW);
+  start();
+  
+  
+}
+
+void sense() {
+ 
+  float current_now = analogRead(A0)/.165;
+  Serial.print(current);
+  
+  Serial.print("mA\n");
+  
+  current = current_now;
+}
+
+
+void setSpeedHigh() {
+  analogWrite(SPEED, LOCKSPEED);
+}
+
+void setSpeed() {
+  int aNumber;
+  char *arg;
+
+  Serial.println("We're in setSpeed\n");
+  arg = sCmd.next();
+  if (arg != NULL) {
+    aNumber = atoi(arg);    // Konwertuje char na int
+    Serial.print("First argument was: ");
+    Serial.println(aNumber);
+    analogWrite(SPEED, aNumber);
+    
+  }
+  else {
+    Serial.println("No arguments");
+  }
+
+
 }
 
 
